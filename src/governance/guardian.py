@@ -1,26 +1,28 @@
-from typing import Dict, Any
+from src.tools.civil_engineer import WorkOrder
 
 class GraniteGuardian:
     def __init__(self):
-        # In a real scenario, this initiates the specific Granite Guardian model
-        self.banned_keywords = ["fake", "scam", "ignore previous instructions"]
+        # Thresholds for automatic approval
+        self.max_budget_low_priority = 5000
+        self.max_budget_critical = 50000
 
-    def validate_input(self, text: str) -> bool:
-        """Check for prompt injection or toxicity."""
-        if any(word in text.lower() for word in self.banned_keywords):
-            return False
-        return True
-
-    def validate_output(self, work_order: Dict[str, Any]) -> bool:
+    def validate_work_order(self, order: WorkOrder) -> tuple[bool, str]:
         """
-        Silent Review: Ensure the agent isn't hallucinating crazy budgets.
+        Silent Review: Audits the work order against city policies.
+        Returns: (is_approved, reason)
         """
-        budget = work_order.get("estimated_budget_usd", 0)
-        priority = work_order.get("priority", "LOW")
+        print(f"🛡️ [Guardian] Auditing Work Order for {order.department}...")
 
-        # Business Logic Guardrail
-        if priority == "LOW" and budget > 50000:
-            print(f"🛡️ [Guardian] BLOCKED: High budget ({budget}) for LOW priority task.")
-            return False
-            
-        return True
+        # Rule 1: Budget Sanity Check
+        if order.priority == "LOW" and order.estimated_budget_usd > self.max_budget_low_priority:
+            return False, f"REJECTED: Budget ${order.estimated_budget_usd} is too high for LOW priority."
+
+        # Rule 2: Safety Compliance
+        if order.priority == "CRITICAL" and "safety" not in order.safety_notes.lower() and "ensure" not in order.safety_notes.lower():
+             return False, "REJECTED: Critical orders must have explicit safety protocols detailed."
+
+        # Rule 3: Department Mismatch (Hallucination Check)
+        if "water" in str(order.required_equipment).lower() and order.department != "WATER":
+             return False, f"REJECTED: Equipment suggests WATER dept, but assigned to {order.department}."
+
+        return True, "APPROVED: Plan meets city governance standards."
