@@ -1,1 +1,35 @@
-venv
+# --- Security & Secrets (CRITICAL) ---
+.env
+.env.local
+*.pem
+*.key
+secrets.yaml
+
+# --- Python ---
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+venv/
+.venv/
+env/
+dist/
+build/
+*.egg-info/
+
+# --- Data & Storage ---
+data/blueprints/*.pdf   # Don't commit large test files
+*.db
+*.sqlite3
+*.sqlite
+chroma_db/
+milvus_data/
+
+# --- IDEs & System ---
+.vscode/
+.idea/
+.DS_Store
+
+# --- Logs ---
+*.log
+bob_security_report.json
