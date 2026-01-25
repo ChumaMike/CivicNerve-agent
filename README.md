@@ -8,8 +8,6 @@ It moves beyond simple chatbots by implementing **Self-Healing Loops** and **Shi
 
 ---
 
-
-
 ## 🛠️ The Winning Arsenal (Tech Stack)
 
 We utilize the **2026 IBM AI Stack** to ensure reliability and trust:
