@@ -1,4 +1,4 @@
-from src.agents.planner import app
+from brain.agents.planner import app
 
 # Simulate a run
 initial_state = {

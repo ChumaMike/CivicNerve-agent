@@ -1,28 +1,31 @@
-from src.tools.civil_engineer import WorkOrder
+from src.system.tools.civil_engineer import WorkOrder
 
 class GraniteGuardian:
     def __init__(self):
-        # Thresholds for automatic approval
-        self.max_budget_low_priority = 5000
-        self.max_budget_critical = 50000
+        self.name = "Granite Guardian"
 
-    def validate_work_order(self, order: WorkOrder) -> tuple[bool, str]:
+    def audit_plan(self, work_order: WorkOrder) -> str:
         """
-        Silent Review: Audits the work order against city policies.
-        Returns: (is_approved, reason)
+        The 'Silent Review' step. Checks safety and budget before approval.
         """
-        print(f"🛡️ [Guardian] Auditing Work Order for {order.department}...")
+        print(f"🛡️ [Guardian] Auditing Work Order for {work_order.department}...")
+        
+        # 1. Safety Check (High Voltage Rule)
+        if work_order.department == "ELECTRICAL":
+            has_gloves = any("gloves" in item.lower() for item in work_order.required_equipment)
+            has_isolation = "isolation" in work_order.safety_notes.lower()
+            
+            if not (has_gloves or has_isolation):
+                return "BLOCKED: Electrical work requires insulated gloves or isolation protocol."
 
-        # Rule 1: Budget Sanity Check
-        if order.priority == "LOW" and order.estimated_budget_usd > self.max_budget_low_priority:
-            return False, f"REJECTED: Budget ${order.estimated_budget_usd} is too high for LOW priority."
+        # 2. Budget Check (ZAR Limit)
+        # We allow up to R2,000,000 for emergency infrastructure
+        if work_order.estimated_budget_zar > 2000000:
+            return f"BLOCKED: Budget R{work_order.estimated_budget_zar} exceeds municipal limit of R2m."
 
-        # Rule 2: Safety Compliance
-        if order.priority == "CRITICAL" and "safety" not in order.safety_notes.lower() and "ensure" not in order.safety_notes.lower():
-             return False, "REJECTED: Critical orders must have explicit safety protocols detailed."
+        # 3. Equipment Check
+        if not work_order.required_equipment:
+            return "BLOCKED: No equipment specified for repair crew."
 
-        # Rule 3: Department Mismatch (Hallucination Check)
-        if "water" in str(order.required_equipment).lower() and order.department != "WATER":
-             return False, f"REJECTED: Equipment suggests WATER dept, but assigned to {order.department}."
-
-        return True, "APPROVED: Plan meets city governance standards."
+        print("   ✅ APPROVED: Plan meets city governance standards.")
+        return "APPROVED"

@@ -1,6 +1,6 @@
 from typing import List, Literal, Optional
 from pydantic import BaseModel, Field
-from .mellea_shim import generative  # Our wrapper
+from src.brain.tools.mellea_shim import generative
 
 # --- Data Models (The "Types" that enforce reliability) ---
 
@@ -8,7 +8,7 @@ class WorkOrder(BaseModel):
     priority: Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
     # ✅ UPDATE THIS LINE:
     department: Literal["ROADS", "WATER", "ELECTRICAL", "PARKS", "GENERAL"]
-    estimated_budget_usd: int
+    estimated_budget_zar: int
     required_equipment: List[str]
     safety_notes: str
 
