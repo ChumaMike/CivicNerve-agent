@@ -5,8 +5,9 @@ from .mellea_shim import generative  # Our wrapper
 # --- Data Models (The "Types" that enforce reliability) ---
 
 class WorkOrder(BaseModel):
-    priority: Literal["CRITICAL", "HIGH", "MEDIUM", "LOW"]
-    department: Literal["ROADS", "WATER", "ELECTRICAL", "PARKS"]
+    priority: Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
+    # ✅ UPDATE THIS LINE:
+    department: Literal["ROADS", "WATER", "ELECTRICAL", "PARKS", "GENERAL"]
     estimated_budget_usd: int
     required_equipment: List[str]
     safety_notes: str

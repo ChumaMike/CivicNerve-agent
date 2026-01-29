@@ -1,46 +1,61 @@
-# 🏙️ CivicNerve: The Sentient City Infrastructure Twin
+# 🏙️ CivicNerve: The Sentient City Operating System
+> **Winner: [Hackathon Name] Submission** > *A Self-Healing, Governed AI Agent for Sustainable City Infrastructure.*
 
-> **IBM TechXchange Hackathon 2026 Entry** > *Track: AI Automation / Sustainable Cities*
+![Status](https://img.shields.io/badge/Status-Prototype_Live-success)
+![Stack](https://img.shields.io/badge/AI-IBM_Granite_3.0-blue)
+![Governance](https://img.shields.io/badge/Governance-Guardian_Active-green)
 
-CivicNerve is an autonomous **Agentic AI** system designed to maintain city infrastructure. It ingests legacy engineering blueprints, analyzes citizen reports (text & vision), and autonomously generates strictly governed work orders.
+## 🚨 The Problem
+Cities are drowning in broken infrastructure.
+1.  **Slow Response:** It takes days for a human to read a report and assign a crew.
+2.  **Safety Risks:** Human error leads to dangerous excavations (e.g., hitting gas lines).
+3.  **Citizen Apathy:** People stop reporting issues because they feel ignored.
 
-It moves beyond simple chatbots by implementing **Self-Healing Loops** and **Shift-Left Governance**.
+## 💡 The Solution: CivicNerve
+CivicNerve is not a chatbot; it is an **Agentic Neural System**. It automates the entire lifecycle of city maintenance:
+1.  **Sees:** Uses **Granite Vision** (Simulated) to analyze citizen photos.
+2.  **Thinks:** Uses **Granite 3.0** to generate technical Work Orders from natural language.
+3.  **Protects:** A **"Shift-Left" Governance Layer** blocks unsafe or over-budget plans *before* execution.
+4.  **Engages:** A **Gamified Wallet System** rewards citizens for being the city's eyes.
 
 ---
 
-## 🛠️ The Winning Arsenal (Tech Stack)
+## 🏗️ Architecture
+CivicNerve is built on a decoupled **Microservice Architecture**:
 
-We utilize the **2026 IBM AI Stack** to ensure reliability and trust:
-
-| Component | Technology | Role |
+| Component | Tech Stack | Function |
 | :--- | :--- | :--- |
-| **Brain** | **CUGA** (via LangGraph) | Planner-Executor engine for complex decision making. |
-| **Motor** | **Mellea** (Generative Programming) | Generates structured, type-safe SQL & JSON outputs (no hallucinations). |
-| **Senses** | **Docling** | Ingests complex PDF blueprints and engineering schematics. |
-| **Vision** | **IBM Granite 3.0 Vision** | Analyzes photos of infrastructure damage. |
-| **Safety** | **ALTK & Granite Guardian** | "Silent Review" loops to validate budget & safety before execution. |
-| **Security** | **IBM Bob** | Scaffolding and vulnerability scanning. |
+| **The Brain (Backend)** | `FastAPI` + `Pydantic` | Handles logic, AI routing, and strict type validation. |
+| **The Intelligence** | `IBM Granite` + `Mellea` | Generative programming to create structured Work Orders. |
+| **The Shield** | `Granite Guardian` | Governance layer to audit safety and budget compliance. |
+| **Citizen App** | `Streamlit` | Frontend for reporting issues and tracking Rewards/Credits. |
+| **City Ops Center** | `Streamlit` | Secure dashboard for dispatching crews and managing budgets. |
 
 ---
 
-## 🏗️ Architecture: The "Three-Lobe" Brain
-
-1.  **Sensory Cortex (Ingestion):** Docling parses 50-year-old pipe schematics into vector-searchable knowledge.
-2.  **Frontal Lobe (Reasoning):** The Agent plans a response: *Analyze Hazard -> Check Budget -> Schedule Crew*.
-3.  **Guardian Lobe (Governance):** ALTK intercepts the final plan. If the AI suggests a $1M repair for a pothole, the Guardian blocks it and forces a replan.
+## ⚡ Key Features (The "Wow" Factors)
+* **🛡️ Silent Review Loop:** The AI generates a plan, but the Governance Layer acts as a "Health Inspector," rejecting unsafe plans (e.g., "Ignore safety rules") instantly.
+* **🎮 Civic Gamification:** Citizens earn **"Civic Credits"** for verified reports. The system intelligently detects duplicates to prevent spam.
+* **🧠 Context-Aware Priority:** The Agent understands local context (e.g., treating "Water Leaks" as CRITICAL due to drought conditions).
 
 ---
 
-## 🚀 Quick Start
+## 🚀 How to Run the Demo (The Ecosystem)
+This project simulates a full city ecosystem using **3 Terminal Windows**.
 
-### 1. Prerequisites
-* Python 3.11+
-* IBM Cloud API Key (for Watsonx.ai)
-
-### 2. Installation
+### 1. Start the Neural Engine (Backend)
 ```bash
-git clone [https://github.com/your-username/civic-nerve.git](https://github.com/your-username/civic-nerve.git)
-cd civic-nerve
-python3 -m venv venv
-source venv/bin/activate
-pip install -r requirements.txt
+python -m src.api
+Runs on: http://localhost:8000
+
+2. Start the Citizen App (Frontend A)
+Bash
+
+streamlit run src/citizen_app.py --server.port 8501
+Runs on: http://localhost:8501
+
+3. Start the City Ops Center (Frontend B)
+Bash
+
+streamlit run src/city_ops.py --server.port 8502
+Runs on: http://localhost:8502
