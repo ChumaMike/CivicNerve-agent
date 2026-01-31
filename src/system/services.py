@@ -1,55 +1,64 @@
+import os
 import requests
 import random
 import streamlit as st
-from src.data.db_handler import save_job, add_points
+from src.data.db_handler import add_report 
 
-API_URL = "http://localhost:8000"
-
-def simulate_gps_location():
-    """Generates a random coordinate in Orlando West, Soweto"""
-    # Center Point: Orlando West (-26.2323, 27.9138)
-    # We add small variation so points don't stack perfectly
-    lat = -26.2323 + (random.uniform(-0.005, 0.005)) 
-    lon = 27.9138 + (random.uniform(-0.005, 0.005))
-    return lat, lon
+# API CONFIG
+API_URL = os.getenv("API_URL", "http://localhost:8000")
 
 def submit_report_to_backend(description, image_name):
-    """Sends the report to the AI Brain"""
+    """
+    Sends the user input to the FastAPI backend.
+    """
     payload = {"user_input": description, "image_desc": image_name}
     try:
+        # We assume the API is running locally
         response = requests.post(f"{API_URL}/report_incident", json=payload)
-        if response.status_code == 200:
-            return response.json()
-        return {"error": f"Server Error: {response.status_code}"}
+        return response.json()
     except Exception as e:
-        return {"error": str(e)}
+        return {"error": f"Connection Error: {str(e)}"}
 
 def fetch_legal_compliance(description):
-    """Consults the RAG Engine for Bylaws"""
+    """
+    Asks the RAG engine for relevant bylaws.
+    """
+    payload = {"incident_description": description}
     try:
-        response = requests.post(f"{API_URL}/consult_bylaws", json={"incident_description": description})
+        response = requests.post(f"{API_URL}/consult_bylaws", json=payload)
         if response.status_code == 200:
             return response.json().get("relevant_laws", [])
-        return []
+        return ["Error fetching bylaws."]
     except:
-        return []
+        return ["System Offline"]
 
-def process_successful_report(user_phone, desc, ai_order, lat, lon):
-    """Saves the job to SQL and awards points"""
-    # 1. Prepare Data
-    job_entry = {
-        "description": desc,
-        "location": f"{lat:.4f}, {lon:.4f}",
-        "priority": ai_order.get("priority", "MEDIUM"),
-        "budget_zar": ai_order.get("estimated_budget_zar", 0),
-        "department": ai_order.get("department", "GENERAL"),
-        "reporter": user_phone
+def simulate_gps_location():
+    """
+    Generates a random coordinate in Orlando East, Soweto
+    """
+    # Center: Orlando East (-26.236, 27.925)
+    lat = -26.2360 + (random.uniform(-0.005, 0.005)) 
+    lon = 27.9250 + (random.uniform(-0.005, 0.005))
+    return lat, lon
+
+def process_successful_report(phone, desc, work_order, lat, lon):
+    """
+    Saves the job and adds points in one atomic transaction.
+    """
+    # 1. Determine Points based on Priority
+    # (If the AI didn't give a priority, default to MEDIUM)
+    priority = work_order.get("priority", "MEDIUM")
+    
+    points_map = {
+        "CRITICAL": 100,
+        "HIGH": 75,
+        "MEDIUM": 50,
+        "LOW": 25
     }
+    earned = points_map.get(priority, 50)
     
-    # 2. Save to DB
-    ticket_id = save_job(job_entry)
-    
-    # 3. Add Points
-    new_balance = add_points(user_phone, 50)
+    # 2. Call the new DB function
+    # This handles both saving the ticket and updating the user's wallet
+    ticket_id, new_balance = add_report(phone, desc, earned)
     
     return ticket_id, new_balance

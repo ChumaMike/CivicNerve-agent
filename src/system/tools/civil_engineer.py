@@ -1,40 +1,50 @@
-from typing import List, Literal, Optional
+from enum import Enum
+from typing import List, Optional
 from pydantic import BaseModel, Field
+
+# ✅ FIX: Connect the Brain Logic
 from src.brain.tools.mellea_shim import generative
 
-# --- Data Models (The "Types" that enforce reliability) ---
+# --- MCP COMPLIANCE LAYER ---
 
-class WorkOrder(BaseModel):
-    priority: Literal["LOW", "MEDIUM", "HIGH", "CRITICAL"]
-    # ✅ UPDATE THIS LINE:
-    department: Literal["ROADS", "WATER", "ELECTRICAL", "PARKS", "GENERAL"]
-    estimated_budget_zar: int
-    required_equipment: List[str]
-    safety_notes: str
+class DepartmentEnum(str, Enum):
+    ROADS = "ROADS"
+    WATER = "WATER" 
+    ELECTRICAL = "ELECTRICAL"
+    PARKS = "PARKS"
+    GENERAL = "GENERAL"
+    INTERNAL = "INTERNAL" 
 
 class IncidentReport(BaseModel):
-    summary: str
-    location: str
-    detected_hazards: List[str]
+    """
+    MCP Resource: Represents the raw analysis of the user's input.
+    """
+    summary: str = Field(description="A one-line technical summary of the issue.")
+    location: str = Field(description="Inferred or GPS-tagged location.")
+    detected_hazards: List[str] = Field(description="List of immediate risks (e.g., 'Exposed Wire').")
 
-# --- Generative Functions ---
+class WorkOrder(BaseModel):
+    """
+    MCP Resource: Represents the final execution plan for the city.
+    """
+    priority: str = Field(description="CRITICAL, HIGH, MEDIUM, or LOW.")
+    department: DepartmentEnum = Field(description="The municipal unit responsible.")
+    estimated_budget_zar: float = Field(description="Cost estimate in South African Rands (ZAR).")
+    required_equipment: List[str] = Field(description="Heavy machinery or tools needed.")
+    safety_notes: str = Field(description="Mandatory ISO-9001 safety protocols.")
 
-@generative(model_id="ibm/granite-13b-instruct-v2")
-def classify_incident(user_report: str, image_analysis: str) -> IncidentReport:
-    """
-    Analyze the raw text from a citizen and the description of the attached image.
-    Extract the location, summarize the issue, and list specific physical hazards.
-    """
-    pass # The decorator handles the logic
+# --- TOOL DEFINITIONS (NOW CONNECTED) ---
 
-@generative(model_id="ibm/granite-13b-instruct-v2")
-def generate_work_order(incident: IncidentReport, city_blueprint_context: str) -> WorkOrder:
+@generative()
+def classify_incident(user_text: str, image_analysis: str) -> IncidentReport:
     """
-    Act as a Senior City Engineer. Based on the incident and the city's blueprint data,
-    create a formal work order.
-    
-    Rules:
-    - If 'water' and 'electricity' are both present, priority must be CRITICAL.
-    - Budget must be realistic for municipal repairs.
+    Analyzes raw text and image data to produce a structured incident report.
     """
-    pass
+    pass # The @generative decorator provides the logic!
+
+@generative()
+def generate_work_order(incident: IncidentReport, blueprint_context: str) -> WorkOrder:
+    """
+    Converts an incident report and blueprint data into a costed work order.
+    """
+    pass # The @generative decorator provides the logic!

@@ -2,13 +2,11 @@ import sys
 import os
 import time
 
-# --- 1. THE MAGIC FIX (MUST BE AT THE TOP) ---
 # Get the absolute path to the project root (Go up 2 levels from src/interface)
 current_dir = os.path.dirname(os.path.abspath(__file__))
 project_root = os.path.abspath(os.path.join(current_dir, "../../"))
 sys.path.append(project_root)
 
-# --- 2. NOW IMPORT EVERYTHING ELSE ---
 import streamlit as st
 import random
 from src.data.db_handler import is_duplicate, get_points
@@ -37,7 +35,7 @@ with st.container():
     c3.metric("Civic Credits", f"{my_points} 🪙")
 st.divider()
 
-# --- 3. REPORT FORM ---
+# --- REPORT FORM ---
 # Only show the form if we are NOT showing a success message
 if "success_data" not in st.session_state:
     st.markdown("### 📸 Spot a problem?")
@@ -56,14 +54,20 @@ if "success_data" not in st.session_state:
         if len(desc) < 5:
             st.toast("⚠️ Description too short!")
         else:
-            # 1. Check Duplicates
+            # Check Duplicates
             is_dup, dup_id = is_duplicate(desc)
             if is_dup:
                 st.warning(f"🙌 Good eye! Already reported (Ticket #{dup_id}). Priority boosted!")
                 st.balloons()
             else:
-                # 2. Process New Report
-                with st.status("🧠 CivicNerve AI is analyzing...", expanded=True) as status:
+                # We use a Status Container to show the AI's "Brain Waves"
+                with st.status("🚀 CivicNerve Agents Activating...", expanded=True) as status:
+                    
+                    # Step 1: Ingestion
+                    st.write("👀 **Sensory Cortex:** Analyzing Evidence...")
+                    time.sleep(1) # Fake delay for drama
+                    
+                    # Call the API
                     image_name = photo.name if photo else "None"
                     api_result = services.submit_report_to_backend(desc, image_name)
                     
@@ -71,29 +75,52 @@ if "success_data" not in st.session_state:
                         status.update(label="❌ System Error", state="error")
                         st.error(api_result["error"])
                     else:
+                        # Step 2: Planning
+                        st.write("🧠 **Planner Agent:** Consulting Municipal Blueprints (Granite Optimized)...")
+                        time.sleep(0.8)
+                        
                         guardian = api_result.get("guardian_review", "UNKNOWN")
+                        audit_trail = api_result.get("audit_trail", {})
+                        
                         if "APPROVED" in guardian:
+                            # Step 3: Governance
+                            st.write(f"🛡️ **Granite Guardian:** Auditing Budget & Safety...")
+                            time.sleep(0.8)
+                            st.write(f"   ↳ 🔐 Digital Seal Generated: `{audit_trail.get('digital_seal', 'UNKNOWN')}`")
+                            
+                            # Step 4: Finalizing
+                            st.write("💰 **Finance Layer:** Allocating ZAR Budget...")
+                            time.sleep(0.5)
+
+                            # Success Logic
                             order = api_result.get("work_order") or api_result.get("final_work_order", {})
                             lat, lon = services.simulate_gps_location()
+                            
+                            # Save & Pay
                             ticket_id, new_balance = services.process_successful_report(
                                 st.session_state.user_phone, desc, order, lat, lon
                             )
                             
-                            # ✅ SAVE DATA TO STATE (The Memory)
+                            # ✅ SAVE DATA TO STATE
                             st.session_state["success_data"] = {
                                 "ticket_id": ticket_id,
                                 "balance": new_balance,
                                 "lat": lat, "lon": lon,
                                 "order": order,
-                                "laws": services.fetch_legal_compliance(desc)
+                                "laws": services.fetch_legal_compliance(desc),
+                                "audit": audit_trail # Save the Audit for the receipt
                             }
                             
-                            # Reload immediately to update the Header
-                            st.rerun() 
+                            status.update(label="✅ **Work Order Authorized!**", state="complete", expanded=False)
+                            time.sleep(1.5) # Let them admire the green checkmark
+                            st.rerun() # NOW we refresh
+                            
                         else:
-                            st.error(f"Report rejected: {guardian}")
+                            status.update(label="❌ **Guardian Rejected Plan**", state="error")
+                            st.error(f"Governance Block: {guardian}")
+                            st.write(f"Reason: {audit_trail.get('reason', 'Unknown')}")
 
-# --- 4. SUCCESS SCREEN (The "Sticky" Part) ---
+# --- SUCCESS SCREEN---
 else:
     # If we have success data, show THIS instead of the form
     data = st.session_state["success_data"]

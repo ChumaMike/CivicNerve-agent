@@ -1,116 +1,93 @@
 import sqlite3
 import os
 from datetime import datetime
-from difflib import SequenceMatcher
+import pandas as pd
 
-DB_FILE = "civic_nerve.db"
+# Path setup
+CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
+PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "../../"))
+DB_PATH = os.path.join(PROJECT_ROOT, "src/data/civic_nerve.db")
 
 def init_db():
-    """Initialize a Relational SQL Database"""
-    conn = sqlite3.connect(DB_FILE)
+    """Creates the database and tables if they don't exist."""
+    os.makedirs(os.path.dirname(DB_PATH), exist_ok=True)
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     
-    # 1. Users Table (The Wallet)
+    # Table 1: Reports
+    c.execute('''CREATE TABLE IF NOT EXISTS reports
+                 (id INTEGER PRIMARY KEY AUTOINCREMENT, 
+                  phone TEXT, 
+                  description TEXT, 
+                  status TEXT, 
+                  timestamp TEXT)''')
+    
+    # Table 2: Users (The missing table!)
     c.execute('''CREATE TABLE IF NOT EXISTS users
                  (phone TEXT PRIMARY KEY, 
-                  points INTEGER DEFAULT 0,
-                  joined_date TEXT)''')
-    
-    # 2. Incidents Table (The Work Orders)
-    c.execute('''CREATE TABLE IF NOT EXISTS incidents
-                 (id TEXT PRIMARY KEY,
-                  timestamp TEXT,
-                  description TEXT,
-                  location TEXT,
-                  department TEXT,
-                  priority TEXT,
-                  budget_zar INTEGER,
-                  status TEXT,
-                  reporter_phone TEXT,
-                  assigned_crew TEXT)''')
+                  points INTEGER)''')
     
     conn.commit()
     conn.close()
 
-# --- WALLET FUNCTIONS ---
-def add_points(phone, amount=50):
-    init_db()
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
-    
-    # Check if user exists, if not create them
-    c.execute("SELECT points FROM users WHERE phone=?", (phone,))
-    result = c.fetchone()
-    
-    if result:
-        new_points = result[0] + amount
-        c.execute("UPDATE users SET points=? WHERE phone=?", (new_points, phone))
-    else:
-        new_points = amount
-        c.execute("INSERT INTO users (phone, points, joined_date) VALUES (?, ?, ?)", 
-                  (phone, amount, datetime.now().strftime("%Y-%m-%d")))
-    
-    conn.commit()
-    conn.close()
-    return new_points
+def is_duplicate(description):
+    """
+    DEMO MODE: Always allow reports (returns False).
+    """
+    return False, None
 
 def get_points(phone):
-    init_db()
-    conn = sqlite3.connect(DB_FILE)
+    """
+    Gets points for a user. 
+    ✅ FIX: Auto-initializes DB if file was deleted.
+    """
+    init_db()  # <--- THIS IS THE FIX. RUNS EVERY TIME.
+    
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     c.execute("SELECT points FROM users WHERE phone=?", (phone,))
     result = c.fetchone()
     conn.close()
     return result[0] if result else 0
 
-# --- INCIDENT FUNCTIONS ---
-def save_job(job_data):
-    init_db()
-    conn = sqlite3.connect(DB_FILE)
+def add_report(phone, description, points_earned):
+    """
+    Saves report and updates wallet in one go.
+    """
+    init_db() # Double check DB exists
+    conn = sqlite3.connect(DB_PATH)
     c = conn.cursor()
     
-    # Generate ID: JHB-1001, JHB-1002...
-    c.execute("SELECT COUNT(*) FROM incidents")
-    count = c.fetchone()[0]
-    job_id = f"JHB-{count + 1001}"
+    # 1. Log report
+    c.execute("INSERT INTO reports (phone, description, status, timestamp) VALUES (?, ?, ?, ?)",
+              (phone, description, "VERIFIED", datetime.now().isoformat()))
+    ticket_id = c.lastrowid
     
-    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M")
+    # 2. Add points
+    c.execute("INSERT OR IGNORE INTO users (phone, points) VALUES (?, 0)", (phone,))
+    c.execute("UPDATE users SET points = points + ? WHERE phone = ?", (points_earned, phone))
     
-    c.execute('''INSERT INTO incidents VALUES 
-                 (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)''',
-              (job_id, timestamp, job_data['description'], job_data['location'],
-               job_data['department'], job_data['priority'], job_data['budget_zar'],
-               "PENDING REVIEW", job_data['reporter'], "None"))
+    # 3. Get new balance
+    c.execute("SELECT points FROM users WHERE phone=?", (phone,))
+    new_balance = c.fetchone()[0]
     
     conn.commit()
     conn.close()
-    return job_id
-
-def is_duplicate(description):
-    init_db()
-    conn = sqlite3.connect(DB_FILE)
-    c = conn.cursor()
     
-    # Fetch all active descriptions
-    c.execute("SELECT id, description FROM incidents WHERE status != 'RESOLVED'")
-    rows = c.fetchall()
-    conn.close()
-    
-    for row in rows:
-        ticket_id, text = row
-        similarity = SequenceMatcher(None, text.lower(), description.lower()).ratio()
-        if similarity > 0.6:
-            return True, ticket_id
-            
-    return False, None
+    return f"JHB-{1000+ticket_id}", new_balance
 
-# For the City Ops Dashboard
-def get_jobs():
+
+def fetch_all_reports():
+    """
+    CITY OPS: Fetches live data for the Dashboard.
+    Returns a Pandas DataFrame for easy table rendering.
+    """
     init_db()
-    conn = sqlite3.connect(DB_FILE)
-    conn.row_factory = sqlite3.Row # Allows accessing columns by name
-    c = conn.cursor()
-    c.execute("SELECT * FROM incidents ORDER BY timestamp DESC")
-    rows = [dict(row) for row in c.fetchall()]
+    conn = sqlite3.connect(DB_PATH)
+    
+    # We join with users to get point info if needed, but simple is fine for now
+    query = "SELECT id, timestamp, phone, description, status FROM reports ORDER BY id DESC"
+    df = pd.read_sql_query(query, conn)
+    
     conn.close()
-    return rows
+    return df

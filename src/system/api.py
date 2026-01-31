@@ -1,12 +1,13 @@
 from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel
 from typing import Optional
+
 from src.brain.agents.planner import create_plan, AgentState
 from src.system.tools.civil_engineer import IncidentReport
 from src.brain.rag_engine import query_knowledge_base
 from src.governance.guardian import GraniteGuardian
 
-app = FastAPI(title="CivicNerve API", version="2.0")
+app = FastAPI(title="CivicNerve API", version="2.1")
 
 class IncidentRequest(BaseModel):
     user_input: str
@@ -31,21 +32,27 @@ def report_incident(request: IncidentRequest):
     )
     
     try:
-        # 2. ✅ CALL PLANNER DIRECTLY (This was the bug!)
-        # Old code was: result = agent_app.invoke(state)
+        # 2. CALL PLANNER (Granite Optimized)
         result = create_plan(state) 
         
-        # 3. Run Guardian Check
+        # 3. Run Guardian Check (Enterprise Audit)
         guardian = GraniteGuardian()
         if result["final_work_order"]:
-            review = guardian.audit_plan(result["final_work_order"])
+            audit_log = guardian.audit_plan(result["final_work_order"])
+            
+            # Simple logic for frontend compatibility
+            review_summary = audit_log["status"]
+            if audit_log["status"] != "APPROVED":
+                review_summary = f"{audit_log['status']}: {audit_log['reason']}"
         else:
-            review = "ERROR: No Plan Generated"
+            audit_log = {"status": "ERROR", "reason": "No Plan Generated"}
+            review_summary = "ERROR: No Plan Generated"
             
         return {
             "status": "processed",
             "work_order": result["final_work_order"],
-            "guardian_review": review
+            "guardian_review": review_summary,
+            "audit_trail": audit_log # ✅ SENDING THE DIGITAL SEAL TO FRONTEND
         }
 
     except Exception as e:
@@ -60,7 +67,6 @@ def consult_bylaws(request: BylawRequest):
         return {"status": "success", "relevant_laws": laws}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
 
 if __name__ == "__main__":
     import uvicorn

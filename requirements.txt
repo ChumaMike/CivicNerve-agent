@@ -1,17 +1,14 @@
-# --- The Brain & Logic ---
-ibm-watsonx-ai>=1.0.0
-langchain-ibm>=0.1.0
-langgraph>=0.1.0
-langchain-core>=0.2.0
-
-# --- The Muscles (Generative Programming) ---
-instructor>=1.3.0
-pydantic>=2.8.0
-
-# --- The Senses (Ingestion) ---
-docling>=2.0.0
-
-# --- Utilities ---
-python-dotenv
+fastapi
+uvicorn
+requests
+streamlit
 pandas
-numpy
+plotly
+pydantic
+python-dotenv
+docling
+langchain
+langchain-community
+faiss-cpu
+python-multipart
+watchdog

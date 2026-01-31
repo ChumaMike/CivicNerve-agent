@@ -1,0 +1,54 @@
+version: '3.8'
+
+services:
+  # 🧠 SERVICE 1: THE BRAIN (API)
+  civic_api:
+    build: .
+    container_name: civic_nerve_brain
+    command: python -m src.system.api
+    environment:
+      - IBM_API_KEY=your_real_api_key_here  # <--- PASTE KEY HERE
+      - IBM_PROJECT_ID=your_real_project_id_here # <--- PASTE ID HERE
+    volumes:
+      - ./src/data:/app/src/data
+      - ./data:/app/data
+    ports:
+      - "8000:8000"
+    networks:
+      - city_net
+
+  # 📱 SERVICE 2: THE CITIZEN APP
+  citizen_app:
+    build: .
+    container_name: civic_nerve_citizen
+    command: streamlit run src/interface/citizen_app.py --server.port 8501
+    environment:
+      - API_URL=http://civic_api:8000  # <--- MAGIC: Talks to container by name
+    volumes:
+      - ./src/data:/app/src/data
+    ports:
+      - "8501:8501"
+    depends_on:
+      - civic_api
+    networks:
+      - city_net
+
+  # 🏙️ SERVICE 3: THE COMMAND CENTER
+  city_dashboard:
+    build: .
+    container_name: civic_nerve_hq
+    command: streamlit run src/interface/city_dashboard.py --server.port 8502
+    environment:
+      - API_URL=http://civic_api:8000
+    volumes:
+      - ./src/data:/app/src/data
+    ports:
+      - "8502:8502"
+    depends_on:
+      - civic_api
+    networks:
+      - city_net
+
+networks:
+  city_net:
+    driver: bridge
