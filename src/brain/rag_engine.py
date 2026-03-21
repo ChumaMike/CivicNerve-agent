@@ -4,31 +4,49 @@ from typing import List
 from docling.document_converter import DocumentConverter
 from langchain_text_splitters import MarkdownHeaderTextSplitter
 from langchain_community.vectorstores import FAISS
-from langchain_community.embeddings import FakeEmbeddings
+from langchain_huggingface import HuggingFaceEmbeddings
 
 # --- CONSTANTS ---
-# Path Fix: Ensure we always find the data folder relative to this script
 CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
 PROJECT_ROOT = os.path.abspath(os.path.join(CURRENT_DIR, "../../"))
 DATA_PATH = os.path.join(PROJECT_ROOT, "data")
 DB_PATH = os.path.join(PROJECT_ROOT, "src/data/vector_db")
 
-# Fake Embeddings for Demo Speed (Replace with IBM Watsonx / OpenAI later)
-embeddings = FakeEmbeddings(size=768)
+# Real sentence-transformer embeddings (384-dim, runs locally, no API cost)
+embeddings = HuggingFaceEmbeddings(
+    model_name="sentence-transformers/all-MiniLM-L6-v2",
+    model_kwargs={"device": "cpu"},
+    encode_kwargs={"normalize_embeddings": True}
+)
+
+# Module-level cache so we load FAISS once per process lifecycle
+_vector_db_cache = None
+
+
+def _get_vector_db():
+    global _vector_db_cache
+    if _vector_db_cache is None:
+        _vector_db_cache = FAISS.load_local(
+            DB_PATH, embeddings, allow_dangerous_deserialization=True
+        )
+    return _vector_db_cache
+
+
+def _invalidate_cache():
+    global _vector_db_cache
+    _vector_db_cache = None
+
 
 def build_knowledge_base():
     """
-    PHASE 1 UPGRADE: IBM DOCLING INGESTION
-    Reads PDFs using Docling to preserve TABLE structures in Bylaws.
+    Ingests PDFs using IBM Docling to preserve TABLE structures in Bylaws,
+    then stores real embeddings in FAISS.
     """
     print("🔹 [Docling] Starting Intelligent Ingestion...")
-    
-    # 1. Initialize IBM Docling Converter
+
     converter = DocumentConverter()
-    
     all_splits = []
-    
-    # 2. Scan Data Folder
+
     if not os.path.exists(DATA_PATH):
         print(f"❌ Error: Data folder not found at {DATA_PATH}")
         return
@@ -37,63 +55,54 @@ def build_knowledge_base():
         if filename.endswith(".pdf"):
             file_path = os.path.join(DATA_PATH, filename)
             print(f"   📄 Parsing with Docling: {filename}...")
-            
+
             try:
-                # --- THE MAGIC: DOCLING CONVERSION ---
-                # Converts complex PDF layout into structured Markdown
                 result = converter.convert(file_path)
                 markdown_text = result.document.export_to_markdown()
-                
-                # 3. Smart Splitting (Preserves Headers & Tables)
-                # We split by headers so "Section 5: Fines" stays together
+
                 headers_to_split_on = [
                     ("#", "Header 1"),
                     ("##", "Header 2"),
                     ("###", "Header 3"),
                 ]
-                splitter = MarkdownHeaderTextSplitter(headers_to_split_on=headers_to_split_on)
+                splitter = MarkdownHeaderTextSplitter(
+                    headers_to_split_on=headers_to_split_on
+                )
                 splits = splitter.split_text(markdown_text)
-                
-                # Add source metadata so we know which Bylaw it came from
+
                 for split in splits:
                     split.metadata["source"] = filename
-                    
+
                 all_splits.extend(splits)
-                print(f"      ✅ Successfully extracted {len(splits)} structured chunks.")
-                
+                print(f"      ✅ Extracted {len(splits)} structured chunks.")
+
             except Exception as e:
                 print(f"      ❌ Failed to parse {filename}: {e}")
 
-    # 4. Save to Vector Database (FAISS)
     if all_splits:
-        print(f"   💾 Saving {len(all_splits)} chunks to Vector DB...")
+        print(f"   💾 Saving {len(all_splits)} chunks to Vector DB with real embeddings...")
         vector_db = FAISS.from_documents(all_splits, embeddings)
         vector_db.save_local(DB_PATH)
-        print("✅ Knowledge Base Built with Docling Intelligence!")
+        _invalidate_cache()  # Reset cache so next query loads fresh index
+        print("✅ Knowledge Base Built with real sentence-transformer embeddings!")
     else:
         print("⚠️ No documents processed. Please add PDFs to the 'data' folder.")
 
+
 def query_knowledge_base(query: str) -> List[str]:
-    """
-    Retrieves the most relevant legal clauses for a given issue.
-    """
-    # Defensive: Check if DB exists
+    """Retrieves the most relevant legal clauses for a given issue."""
     if not os.path.exists(DB_PATH):
         return ["Error: Knowledge Base not found. Run 'python -m src.brain.rag_engine' first."]
-    
+
     try:
-        # Load the DB
-        vector_db = FAISS.load_local(DB_PATH, embeddings, allow_dangerous_deserialization=True)
-        
-        # Search for top 3 matches
+        vector_db = _get_vector_db()
         results = vector_db.similarity_search(query, k=3)
-        
-        # Return clean text
         return [doc.page_content for doc in results]
-        
+
     except Exception as e:
+        _invalidate_cache()  # Reset on error so next call tries a fresh load
         return [f"RAG Error: {str(e)}"]
 
+
 if __name__ == "__main__":
-    # Run this directly to rebuild the DB
     build_knowledge_base()

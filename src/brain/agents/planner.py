@@ -25,8 +25,11 @@ def create_plan(state: AgentState):
     
     # --- STEP 1: READ BLUEPRINTS ---
     print("\n🔹 [Step 1] Sensory Cortex: Reading Blueprints...")
-    # (Mocking blueprint retrieval for speed)
-    blueprint_context = "Zone 4: Mixed Residential/Industrial. High traffic."
+    # Blueprint context — default zone profile; extend with GIS integration later
+    blueprint_context = (
+        "Zone 4: Mixed Residential/Industrial. High traffic. "
+        "Grid-connected infrastructure. Proximity to Soweto water mains."
+    )
     
     # --- STEP 2: CLASSIFY INCIDENT ---
     print("\n🔹 [Step 2] Frontal Lobe: Analyzing Incident...")

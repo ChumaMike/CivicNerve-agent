@@ -1,6 +1,8 @@
 import functools
 import inspect
 import json
+import hashlib
+from functools import lru_cache
 from typing import get_type_hints, Any
 
 # --- IMPORTS FOR REAL AI (The "All In" Upgrade) ---
@@ -12,7 +14,13 @@ except ImportError:
     query_granite_model = lambda x: None 
 
 # --- CONFIGURATION ---
-MODEL_ID = "ibm/granite-13b-instruct-v2"
+MODEL_ID = "ibm/granite-3-8b-instruct"
+
+
+@lru_cache(maxsize=256)
+def _cached_granite_call(prompt_hash: str, prompt: str):
+    """LRU-cached wrapper — greedy decoding is deterministic, so identical prompts yield identical results."""
+    return query_granite_model(prompt)
 
 def generative(model_id=MODEL_ID):
     """
@@ -57,9 +65,9 @@ def generative(model_id=MODEL_ID):
             Return ONLY a valid JSON object matching the schema.
             """
             
-            # Try the Real AI
-            granite_response = query_granite_model(prompt)
-            '.'
+            # Try the Real AI (cached by prompt hash to save API costs on repeated inputs)
+            prompt_hash = hashlib.md5(prompt.encode()).hexdigest()
+            granite_response = _cached_granite_call(prompt_hash, prompt)
 
             if granite_response:
                 try:

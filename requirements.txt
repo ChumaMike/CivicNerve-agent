@@ -9,6 +9,30 @@ python-dotenv
 docling
 langchain
 langchain-community
+langchain-text-splitters
 faiss-cpu
 python-multipart
 watchdog
+
+# Real embeddings (replaces FakeEmbeddings)
+sentence-transformers>=2.6.0
+langchain-huggingface>=0.0.3
+
+# Retry / circuit breaker
+tenacity>=8.2.3
+
+# Structured logging
+python-json-logger>=2.0.7
+
+# Rate limiting
+slowapi>=0.1.9
+
+# Async HTTP client
+httpx>=0.27.0
+
+# Multilingual support (SA languages)
+langdetect>=1.0.9
+deep-translator>=1.11.4
+
+# SMS notifications (Africa-focused)
+africastalking>=1.2.6

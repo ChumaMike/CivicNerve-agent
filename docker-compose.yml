@@ -7,8 +7,12 @@ services:
     container_name: civic_nerve_brain
     command: python -m src.system.api
     environment:
-      - IBM_API_KEY=your_real_api_key_here  # <--- PASTE KEY HERE
-      - IBM_PROJECT_ID=your_real_project_id_here # <--- PASTE ID HERE
+      - IBM_API_KEY=${IBM_API_KEY}
+      - IBM_PROJECT_ID=${IBM_PROJECT_ID}
+      - IBM_CLOUD_URL=${IBM_CLOUD_URL:-https://us-south.ml.cloud.ibm.com}
+      - CITY_OPS_TOKEN=${CITY_OPS_TOKEN}
+      - AT_USERNAME=${AT_USERNAME:-sandbox}
+      - AT_API_KEY=${AT_API_KEY:-}
     volumes:
       - ./src/data:/app/src/data
       - ./data:/app/data
@@ -16,20 +20,27 @@ services:
       - "8000:8000"
     networks:
       - city_net
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
 
   # 📱 SERVICE 2: THE CITIZEN APP
   citizen_app:
     build: .
     container_name: civic_nerve_citizen
-    command: streamlit run src/interface/citizen_app.py --server.port 8501
+    command: streamlit run src/interface/citizen_app.py --server.port 8501 --server.address 0.0.0.0
     environment:
-      - API_URL=http://civic_api:8000  # <--- MAGIC: Talks to container by name
+      - API_URL=http://civic_api:8000
     volumes:
       - ./src/data:/app/src/data
     ports:
       - "8501:8501"
     depends_on:
-      - civic_api
+      civic_api:
+        condition: service_healthy
     networks:
       - city_net
 
@@ -37,15 +48,19 @@ services:
   city_dashboard:
     build: .
     container_name: civic_nerve_hq
-    command: streamlit run src/interface/city_dashboard.py --server.port 8502
+    command: streamlit run src/interface/city_dashboard.py --server.port 8502 --server.address 0.0.0.0
     environment:
       - API_URL=http://civic_api:8000
+      - ADMIN_USERNAME=${ADMIN_USERNAME:-admin}
+      - ADMIN_PASSWORD=${ADMIN_PASSWORD}
     volumes:
       - ./src/data:/app/src/data
     ports:
       - "8502:8502"
+
     depends_on:
-      - civic_api
+      civic_api:
+        condition: service_healthy
     networks:
       - city_net
 
